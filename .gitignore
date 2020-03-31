@@ -1,0 +1,4 @@
+data/
+obj/
+CMakeFiles/
+CMakeCache.txt
