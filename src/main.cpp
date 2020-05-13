@@ -3,158 +3,164 @@
 #include <opencv2/core/types.hpp>
 #include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include <iostream>
 #include <vector>
-using namespace std;
-using namespace cv;
+#include <queue>
+#include "segmentation.hpp"
+#include <cmath>
 
+#define SPLITS 20
+#define CRITERIA_1 50
 
-vector<Scalar> setRgb()
+void preprocessing(const cv::Mat &input_image, cv::Mat &image)
 {
-    RNG rng;
-	vector<Scalar> colors;
-    for(int i = 0; i < 2000; i++)
-    {
-        int r = rng.uniform(0, 256);
-        int g = rng.uniform(0, 256);
-        int b = rng.uniform(0, 256);
-        colors.push_back(Scalar(r,g,b));
-    }
-	return colors;
+    cv::bilateralFilter(input_image, image, 11, 80, 60);
+    //cv::GaussianBlur(image, image, cv::Size(3, 3), 0);
+    cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
+    // cv::Mat mask;
+    // mask.create(image.size(), image.type());
+    // mask = cv::Scalar::all(0);
+    // cv::threshold(image, mask, 250, 255, cv::ThresholdTypes::THRESH_BINARY_INV);
+    // cv::Mat tmp;
+    cv::equalizeHist(image, image);
+    // image.copyTo(tmp, mask);
+    // image = tmp.clone();
 }
-
-Mat segmentation_simple(Mat frame1,vector<Scalar> colors,int nbcluster)
+void seed_placing(cv::Mat &output_image, std::vector<cv::Point2i> &seeds)
 {
-	Mat label;
-    TermCriteria criteria = TermCriteria((TermCriteria::MAX_ITER) + (TermCriteria::EPS), 10, 1.0);
-	Mat center;
-	Mat frame2;
-    frame1.convertTo(frame2, CV_32F, 1/255.0);
-	frame2 = frame2.reshape(1,frame2.total());
-    kmeans(frame2,nbcluster,label,criteria,3,KMEANS_PP_CENTERS,center);
-    center = center.reshape(3,center.rows);
-    frame2 = frame2.reshape(3,frame2.rows);
-    Point3f *p = frame2.ptr<Point3f>();
-    for (int i=0; i<frame2.rows; i++) {
-       int center_id = label.at<int>(i);
-       Point3f point;
-       point.x= colors[center_id].conj()[0];
-       point.y= -colors[center_id].conj()[1];
-       point.z= -colors[center_id].conj()[2];
-       p[i] = point;//center.at<Point3f>(center_id)*255;
-    }
-    frame1 = frame2.reshape(3, frame1.rows);
-    frame1.convertTo(frame1, CV_8U);
-	return frame1;
-}
+    unsigned int cell_width = output_image.size().width / SPLITS;
+    unsigned int cell_height = output_image.size().height / SPLITS;
 
-Mat Wattershed(Mat src,vector<Scalar> colors)
-{
-    for ( int i = 0; i < src.rows; i++ ) {
-        for ( int j = 0; j < src.cols; j++ ) {
-            if ( src.at<Vec3b>(i, j) == Vec3b(255,255,255) )
-            {
-                src.at<Vec3b>(i, j)[0] = 0;
-                src.at<Vec3b>(i, j)[1] = 0;
-                src.at<Vec3b>(i, j)[2] = 0;
-            }
-        }
-    }
-    Mat kernel = (Mat_<float>(3,3) <<
-                  1,  1, 1,
-                  1, -8, 1,
-                  1,  1, 1);
-    Mat imgLaplacian;
-    filter2D(src, imgLaplacian, CV_32F, kernel);
-    Mat sharp;
-    src.convertTo(sharp, CV_32F);
-    Mat imgResult = sharp - imgLaplacian;
-    imgResult.convertTo(imgResult, CV_8UC3);
-    imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
-    Mat bw;
-    cvtColor(imgResult, bw, COLOR_BGR2GRAY);
-    threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
-    Mat dist;
-    distanceTransform(bw, dist, DIST_L2, 3);
-    normalize(dist, dist, 0, 1.0, NORM_MINMAX);
-    threshold(dist, dist, 0.2, 1.0, THRESH_BINARY);
-    Mat kernel1 = Mat::ones(5, 5, CV_8U);
-    dilate(dist, dist, kernel1);
-    Mat dist_8u;
-    dist.convertTo(dist_8u, CV_8U);
-    vector<vector<Point> > contours;
-    findContours(dist_8u, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    Mat markers = Mat::zeros(dist.size(), CV_32S);
-    for (size_t i = 0; i < contours.size(); i++)
+    srand(time(NULL));
+    for (unsigned int i = 0; i < SPLITS; ++i)
     {
-        drawContours(markers, contours, static_cast<int>(i), Scalar(static_cast<int>(i)+1), -1);
-    }
-    circle(markers, Point(5,5), 3, Scalar(255), -1);
-    watershed(imgResult, markers);
-    Mat mark;
-    markers.convertTo(mark, CV_8U);
-    bitwise_not(mark, mark);
-	vector<Vec3b> colors2;
-    for (size_t i = 0; i < contours.size(); i++)
-    {
-        int b = colors[i].conj()[0];
-        int g = - colors[i].conj()[1];
-        int r = -colors[i].conj()[2];
-        colors2.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
-    }
-    Mat dst = Mat::zeros(markers.size(), CV_8UC3);
-    for (int i = 0; i < markers.rows; i++)
-    {
-        for (int j = 0; j < markers.cols; j++)
+        for (unsigned int j = 0; j < SPLITS; ++j)
         {
-            int index = markers.at<int>(i,j);
-            if (index > 0 && index <= static_cast<int>(contours.size()))
+            cv::Point2f p(i * cell_width + rand() % cell_width,
+                          j * cell_height + rand() % cell_height);
+            seeds.push_back(p);
+        }
+    }
+    std::cout << rand() << std::endl;
+}
+
+void region_growing(cv::Mat &image, std::vector<cv::Point2i> &seeds)
+{
+    cv::Mat testimg(image.size().height, image.size().width, image.type(), cv::Scalar(0, 0, 0));
+    unsigned int regions_nb = seeds.size();
+    unsigned int width = image.size().width;
+    unsigned int height = image.size().height;
+
+    Pixel **pixels = new Pixel *[image.size().width];
+    for (int i = 0; i < width; ++i)
+    {
+        pixels[i] = new Pixel[height];
+    }
+    std::deque<cv::Point2i> marked[regions_nb];
+    std::deque<cv::Point2i> borders[regions_nb];
+    for (unsigned int i = 0; i < seeds.size(); ++i)
+    {
+        pixels[seeds[i].x][seeds[i].y].mark = true;
+        pixels[seeds[i].x][seeds[i].y].region = i;
+        marked[i].push_back(seeds[i]);
+    }
+    int count = image.size().area();
+
+    while (count != 0)
+    {
+        int testEmpty = regions_nb;
+        for (unsigned int i = 0; i < regions_nb; ++i)
+        {
+            if (marked[i].empty())
             {
-                dst.at<Vec3b>(i,j) = colors2[index-1];
+                testEmpty--;
+                if (!testEmpty)
+                {
+                    count = 0;
+                }
+                continue;
+            }
+            cv::Point2i p = marked[i].front();
+
+            marked[i].pop_front();
+            count--;
+            bool hasborder = false;
+            uchar intensity = image.at<uchar>(p);
+            for (int ii = -1; ii < 2; ++ii)
+            {
+                for (int jj = -1; jj < 2; ++jj)
+                {
+                    cv::Point2i pp(p.x + ii, p.y + jj);
+                    if (pp.x < 0 || pp.x >= width || pp.y < 0 || pp.y >= height)
+                    {
+                        borders[i].push_back(p);
+                    }
+                    else if (!pixels[pp.x][pp.y].mark)
+                    {
+                        if (std::abs(image.at<uchar>(pp) - intensity) < CRITERIA_1)
+                        {
+                            pixels[pp.x][pp.y].mark = true;
+                            pixels[pp.x][pp.y].region = i;
+                            //testimg.at<uchar>(pp) = 255; //white
+                            marked[i].push_back(pp);
+                        }
+                        else
+                        {
+                            borders[i].push_back(p);
+                        }
+                    }
+                }
             }
         }
     }
-    return dst;
+    for (int i = 0; i < regions_nb; ++i)
+    {
+        for(auto it=borders[i].begin(); it!=borders[i].end();++it) {
+
+            testimg.at<uchar>(*it) = 255; //white
+        }
+    }
+    
 }
 
-int main()
+void segmentation(const cv::Mat &input_image, cv::Mat &output_image)
 {
-	Mat frame1,gray1;
-	Mat frameValue,grayValue;
-	VideoCapture capture("./data/video1.mp4");
-    if(!capture.isOpened())
+    std::vector<cv::Point2i> seeds;
+    preprocessing(input_image, output_image);
+    //seed_placing(output_image, seeds);
+
+    //region_growing(output_image, seeds);
+    cv::resize(output_image, output_image, cv::Size(), 3, 3);
+    cv::imshow("image", output_image);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc != 2)
     {
-        cout << "Could not open reference ";
-        cout << endl;
+        std::cout << " Usage: main FileToLoadAndDisplay" << std::endl;
         return -1;
     }
-    capture.read(frame1);
-	cvtColor(frame1, gray1, COLOR_BGR2GRAY);
-	while ( capture.read(frameValue))
-	{
-		if( frameValue.empty() )
+    std::string filename = argv[1];
+    if (filename.find(".jpg") != std::string::npos || filename.find(".png") != std::string::npos)
+    {
+        cv::Mat input_image;
+        input_image = cv::imread(argv[1], cv::IMREAD_COLOR);
+
+        if (!input_image.data)
         {
-            cout << "--(!) No captured frameValue -- Break!\n";
-            break;
+            std::cout << "Could not open or find the image" << std::endl;
+            return -1;
         }
-		cvtColor(frameValue, grayValue, COLOR_BGR2GRAY);
-		vector<Scalar> colors = setRgb();
-		Mat frameValue2=segmentation_simple(frameValue,colors, 32);
-		Mat frameValue3=segmentation_simple(frameValue,colors, 16);
-		Mat frameValue4=segmentation_simple(frameValue,colors, 8);
-		/*Mat frameValue3=Wattershed(frameValue2,colors);
-		Mat frameValue4=Wattershed(frameValue,colors);*/
-		imshow("image",frameValue);
-		imshow("image2",frameValue2);
-		imshow("image3",frameValue3);
-		imshow("image4",frameValue4);
-		if( waitKey(10) == 27)
-        {
-            break; // escape
-        }
-	}
-	return 0;
+
+        cv::Mat segmented_image;
+        segmentation(input_image, segmented_image);
+        //cv::imshow("image", segmented_image);
+        cv::waitKey(0);
+    }
+    else
+    {
+        std::cout << " Incorrect file format. \n Accepted format : \n- Image: .png, .jpg\n- Video: .mp4, .avi \n Exiting." << std::endl;
+    }
+    return 0;
 }
