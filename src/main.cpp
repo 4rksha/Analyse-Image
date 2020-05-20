@@ -3,6 +3,7 @@
 #include <opencv2/core/types.hpp>
 #include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"
+#include <opencv2/photo.hpp>
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -10,21 +11,12 @@
 #include <cmath>
 
 #define SPLITS 20
-#define CRITERIA_1 50
-
+#define CRITERIA_1 24
 void preprocessing(const cv::Mat &input_image, cv::Mat &image)
 {
-    cv::bilateralFilter(input_image, image, 11, 80, 60);
-    //cv::GaussianBlur(image, image, cv::Size(3, 3), 0);
-    cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
-    // cv::Mat mask;
-    // mask.create(image.size(), image.type());
-    // mask = cv::Scalar::all(0);
-    // cv::threshold(image, mask, 250, 255, cv::ThresholdTypes::THRESH_BINARY_INV);
-    // cv::Mat tmp;
-    cv::equalizeHist(image, image);
-    // image.copyTo(tmp, mask);
-    // image = tmp.clone();
+    //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
+    //cv::bilateralFilter(input_image, image, 5, 80, 80);
+    image = input_image.clone();
 }
 void seed_placing(cv::Mat &output_image, std::vector<cv::Point2i> &seeds)
 {
@@ -41,12 +33,11 @@ void seed_placing(cv::Mat &output_image, std::vector<cv::Point2i> &seeds)
             seeds.push_back(p);
         }
     }
-    std::cout << rand() << std::endl;
 }
 
 void region_growing(cv::Mat &image, std::vector<cv::Point2i> &seeds)
 {
-    cv::Mat testimg(image.size().height, image.size().width, image.type(), cv::Scalar(0, 0, 0));
+    cv::Mat testimg(image.size(), image.type(), cv::Scalar(0, 0, 0));
     unsigned int regions_nb = seeds.size();
     unsigned int width = image.size().width;
     unsigned int height = image.size().height;
@@ -97,11 +88,12 @@ void region_growing(cv::Mat &image, std::vector<cv::Point2i> &seeds)
                     }
                     else if (!pixels[pp.x][pp.y].mark)
                     {
-                        if (std::abs(image.at<uchar>(pp) - intensity) < CRITERIA_1)
+                        float distance = cv::norm((cv::Vec3i) image.at<cv::Vec3b>(pp),(cv::Vec3i) image.at<cv::Vec3b>(p));
+
+                        if (distance < CRITERIA_1)
                         {
                             pixels[pp.x][pp.y].mark = true;
                             pixels[pp.x][pp.y].region = i;
-                            //testimg.at<uchar>(pp) = 255; //white
                             marked[i].push_back(pp);
                         }
                         else
@@ -113,25 +105,40 @@ void region_growing(cv::Mat &image, std::vector<cv::Point2i> &seeds)
             }
         }
     }
-    for (int i = 0; i < regions_nb; ++i)
-    {
-        for(auto it=borders[i].begin(); it!=borders[i].end();++it) {
 
-            testimg.at<uchar>(*it) = 255; //white
+    cv::Vec3b colors[regions_nb];
+    for (unsigned int i = 0; i < regions_nb; ++i)
+    {
+        colors[i][0] = 70 + rand() % 185;
+        colors[i][1] = 70 + rand() % 185;
+        colors[i][2] = 70 + rand() % 185;
+    }
+    for (unsigned int j = 0; j < image.size().width; ++j)
+    {
+        for (unsigned int k = 0; k < image.size().height; ++k)
+        {
+            testimg.at<cv::Vec3b>(cv::Point2i(j, k)) = colors[pixels[j][k].region];
         }
     }
-    
+
+    for (unsigned int i = 0; i < regions_nb; ++i) {
+        for (auto p : borders[i]) {
+            testimg.at<cv::Vec3b>(p) = cv::Vec3b();
+        }
+    }
+    cv::resize(testimg, testimg, cv::Size(), 3, 3);
+
+    cv::imshow("image", testimg);
 }
 
 void segmentation(const cv::Mat &input_image, cv::Mat &output_image)
 {
     std::vector<cv::Point2i> seeds;
     preprocessing(input_image, output_image);
-    //seed_placing(output_image, seeds);
-
-    //region_growing(output_image, seeds);
-    cv::resize(output_image, output_image, cv::Size(), 3, 3);
-    cv::imshow("image", output_image);
+    seed_placing(output_image, seeds);
+    region_growing(output_image, seeds);
+    //cv::resize(output_image, output_image, cv::Size(), 3, 3);
+    //cv::imshow("image", output_image);
 }
 
 int main(int argc, char **argv)
@@ -155,7 +162,6 @@ int main(int argc, char **argv)
 
         cv::Mat segmented_image;
         segmentation(input_image, segmented_image);
-        //cv::imshow("image", segmented_image);
         cv::waitKey(0);
     }
     else
