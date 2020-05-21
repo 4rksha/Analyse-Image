@@ -11,94 +11,84 @@
 #include <cmath>
 
 #define SPLITS 20
-#define CRITERIA_1 24
+#define CRITERIA_1 10
 void preprocessing(const cv::Mat &input_image, cv::Mat &image)
 {
     //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
-    //cv::bilateralFilter(input_image, image, 5, 80, 80);
-    image = input_image.clone();
+    cv::bilateralFilter(input_image, image, 8, 50, 30);
+    if (image.size().height > 1000 || image.size().width > 1000)
+        cv::resize(image, image, cv::Size(), .5, .5);
+
+    //cv::fastNlMeansDenoisingColored(image, image);
+    //cv::addWeighted(input_image, 0.5, image, 0.2, 0, image);
+    //image = input_image.clone();
 }
-void seed_placing(cv::Mat &output_image, std::vector<cv::Point2i> &seeds)
+void seed_placing(cv::Mat &image, std::vector<Region> &regions)
 {
-    unsigned int cell_width = output_image.size().width / SPLITS;
-    unsigned int cell_height = output_image.size().height / SPLITS;
+    unsigned int cell_width = image.size().width / SPLITS;
+    unsigned int cell_height = image.size().height / SPLITS;
 
     srand(time(NULL));
     for (unsigned int i = 0; i < SPLITS; ++i)
     {
         for (unsigned int j = 0; j < SPLITS; ++j)
         {
-            cv::Point2f p(i * cell_width + rand() % cell_width,
-                          j * cell_height + rand() % cell_height);
-            seeds.push_back(p);
+            cv::Point2i seed(i * cell_width + rand() % cell_width,
+                             j * cell_height + rand() % cell_height);
+            Region r;
+            r.AddPixel(seed, image.at<cv::Vec3b>(seed));
+            regions.push_back(r);
         }
     }
 }
 
-void region_growing(cv::Mat &image, std::vector<cv::Point2i> &seeds)
+void region_growing(cv::Mat &image, std::vector<Region> &regions)
 {
     cv::Mat testimg(image.size(), image.type(), cv::Scalar(0, 0, 0));
-    unsigned int regions_nb = seeds.size();
+    unsigned int regions_nb = regions.size();
     unsigned int width = image.size().width;
     unsigned int height = image.size().height;
 
-    Pixel **pixels = new Pixel *[image.size().width];
-    for (int i = 0; i < width; ++i)
-    {
-        pixels[i] = new Pixel[height];
-    }
-    std::deque<cv::Point2i> marked[regions_nb];
+    bool pixels[image.size().width][image.size().height];
+    int marked_count = 0;
     std::deque<cv::Point2i> borders[regions_nb];
-    for (unsigned int i = 0; i < seeds.size(); ++i)
+    for (auto region : regions)
     {
-        pixels[seeds[i].x][seeds[i].y].mark = true;
-        pixels[seeds[i].x][seeds[i].y].region = i;
-        marked[i].push_back(seeds[i]);
+        cv::Point2i p = region.GetPixels().front();
+        pixels[p.x][p.y] = true;
+        region.AddMarkedPixel(p);
+        marked_count++;
     }
     int count = image.size().area();
 
-    while (count != 0)
+    while (marked_count != 0)
     {
-        int testEmpty = regions_nb;
-        for (unsigned int i = 0; i < regions_nb; ++i)
+        for (auto region : regions)
         {
-            if (marked[i].empty())
-            {
-                testEmpty--;
-                if (!testEmpty)
-                {
-                    count = 0;
-                }
-                continue;
-            }
-            cv::Point2i p = marked[i].front();
-
-            marked[i].pop_front();
-            count--;
-            bool hasborder = false;
-            uchar intensity = image.at<uchar>(p);
+            cv::Point2i p = region.GetMarkedPixel();
+            std::cout << p << std::endl;
+            marked_count--;
+            cv::Vec3i p_color = (cv::Vec3i)image.at<cv::Vec3b>(p);
             for (int ii = -1; ii < 2; ++ii)
             {
                 for (int jj = -1; jj < 2; ++jj)
                 {
                     cv::Point2i pp(p.x + ii, p.y + jj);
-                    if (pp.x < 0 || pp.x >= width || pp.y < 0 || pp.y >= height)
+                    if (!(pp.x < 0 || pp.x >= width || pp.y < 0 || pp.y >= height) && !pixels[pp.x][pp.y])
                     {
-                        borders[i].push_back(p);
-                    }
-                    else if (!pixels[pp.x][pp.y].mark)
-                    {
-                        float distance = cv::norm((cv::Vec3i) image.at<cv::Vec3b>(pp),(cv::Vec3i) image.at<cv::Vec3b>(p));
+                        cv::Vec3i pp_color = image.at<cv::Vec3b>(pp);
+                        float distance = cv::norm((cv::Vec3i)pp_color, (cv::Vec3i)p_color);
 
+                        region.AddPixel(pp, pp_color);
+                        pixels[pp.x][pp.y] = true;
                         if (distance < CRITERIA_1)
                         {
-                            pixels[pp.x][pp.y].mark = true;
-                            pixels[pp.x][pp.y].region = i;
-                            marked[i].push_back(pp);
+                            region.AddMarkedPixel(pp);
+                            marked_count++;
                         }
                         else
                         {
-                            borders[i].push_back(p);
+                            region.AddBorderPixel(pp);
                         }
                     }
                 }
@@ -106,37 +96,44 @@ void region_growing(cv::Mat &image, std::vector<cv::Point2i> &seeds)
         }
     }
 
-    cv::Vec3b colors[regions_nb];
-    for (unsigned int i = 0; i < regions_nb; ++i)
-    {
-        colors[i][0] = 70 + rand() % 185;
-        colors[i][1] = 70 + rand() % 185;
-        colors[i][2] = 70 + rand() % 185;
-    }
-    for (unsigned int j = 0; j < image.size().width; ++j)
-    {
-        for (unsigned int k = 0; k < image.size().height; ++k)
-        {
-            testimg.at<cv::Vec3b>(cv::Point2i(j, k)) = colors[pixels[j][k].region];
-        }
-    }
+    // cv::Vec3b colors[regions_nb];
+    // for (unsigned int i = 0; i < regions_nb; ++i)
+    // {
+    //     colors[i][0] = 70 + rand() % 185;
+    //     colors[i][1] = 70 + rand() % 185;
+    //     colors[i][2] = 70 + rand() % 185;
+    // }
+    // for (unsigned int j = 0; j < image.size().width; ++j)
+    // {
+    //     for (unsigned int k = 0; k < image.size().height; ++k)
+    //     {
+    //         image.at<cv::Vec3b>(cv::Point2i(j, k)) = colors[pixels[j][k].region];
+    //     }
+    // }
 
-    for (unsigned int i = 0; i < regions_nb; ++i) {
-        for (auto p : borders[i]) {
-            testimg.at<cv::Vec3b>(p) = cv::Vec3b();
-        }
-    }
-    cv::resize(testimg, testimg, cv::Size(), 3, 3);
+    // for (unsigned int i = 0; i < regions_nb; ++i)
+    // {
+    //     for (auto p : borders[i])
+    //     {
+    //         image.at<cv::Vec3b>(p) = cv::Vec3b(0, 0, 0);
+    //     }
+    // }
+    cv::resize(image, image, cv::Size(), 3, 3);
 
-    cv::imshow("image", testimg);
+    cv::imshow("image", image);
 }
+
+// void region_merging(cv::Mat &image, Pixel** pixels) {
+
+// }
 
 void segmentation(const cv::Mat &input_image, cv::Mat &output_image)
 {
-    std::vector<cv::Point2i> seeds;
+    std::vector<Region> regions;
     preprocessing(input_image, output_image);
-    seed_placing(output_image, seeds);
-    region_growing(output_image, seeds);
+    seed_placing(output_image, regions);
+    region_growing(output_image, regions);
+    //region_merging(output_image, pixels);
     //cv::resize(output_image, output_image, cv::Size(), 3, 3);
     //cv::imshow("image", output_image);
 }
