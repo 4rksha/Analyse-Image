@@ -9,12 +9,13 @@ public:
     Region() : _marked_pixels(), _border_pixels(), _pixels() {};
     void AddPixel(cv::Point2i pixel_pos, cv::Vec3b pixel_color);
     void AbsorbRegion(Region &r);
-    void CalcAvg();
-    std::vector<cv::Point2i> &GetPixels();
-    cv::Point2i &GetMarkedPixel();
+    cv::Vec3b CalcAvg();
+    std::vector<cv::Point2i> GetPixels();
+    cv::Point2i GetMarkedPixel();
+    bool MarkedPixelEmpty();
     std::deque<cv::Point2i> &GetBorderPixels();
-    void AddMarkedPixel(cv::Point2i &pixel);
-    void AddBorderPixel(cv::Point2i &pixel);
+    void AddMarkedPixel(cv::Point2i pixel);
+    void AddBorderPixel(cv::Point2i pixel);
 
 protected:
     int GetSum(int channel);

@@ -11,7 +11,7 @@
 #include <cmath>
 
 #define SPLITS 20
-#define CRITERIA_1 10
+#define CRITERIA_1 8
 void preprocessing(const cv::Mat &input_image, cv::Mat &image)
 {
     //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
@@ -52,7 +52,7 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
     bool pixels[image.size().width][image.size().height];
     int marked_count = 0;
     std::deque<cv::Point2i> borders[regions_nb];
-    for (auto region : regions)
+    for (auto& region : regions)
     {
         cv::Point2i p = region.GetPixels().front();
         pixels[p.x][p.y] = true;
@@ -60,13 +60,14 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
         marked_count++;
     }
     int count = image.size().area();
-
+    std::vector<Region> regions_copy = regions;
     while (marked_count != 0)
     {
-        for (auto region : regions)
+        for (auto& region : regions)
         {
+            if (region.MarkedPixelEmpty()) 
+                continue;
             cv::Point2i p = region.GetMarkedPixel();
-            std::cout << p << std::endl;
             marked_count--;
             cv::Vec3i p_color = (cv::Vec3i)image.at<cv::Vec3b>(p);
             for (int ii = -1; ii < 2; ++ii)
@@ -95,7 +96,11 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
             }
         }
     }
-
+    for (auto region : regions) {
+        cv::Vec3b color = region.CalcAvg();
+        for (auto p : region.GetPixels())
+            image.at<cv::Vec3b>(p) = color;
+    }
     // cv::Vec3b colors[regions_nb];
     // for (unsigned int i = 0; i < regions_nb; ++i)
     // {
