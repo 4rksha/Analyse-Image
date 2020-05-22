@@ -4,28 +4,30 @@
 void Region::AddPixel(cv::Point2i pixel_pos, cv::Vec3b pixel_color)
 {
     _pixels.push_back(pixel_pos);
-
     for (unsigned int i = 0; i < 3; ++i)
     {
         _sum[i] += pixel_color.val[i];
     }
+    _count++;
 }
 
-void Region::AbsorbRegion(Region &r)
+std::set<unsigned int> Region::AbsorbRegion(Region &r)
 {
-    _pixels.insert(_pixels.end(), r.GetPixels().begin(), r.GetPixels().end());
+    std::set<unsigned int> n = r.GetNeighbours();
+    for (auto pixel : r.GetPixels())
+        _pixels.push_back(pixel);
     for (unsigned int i = 0; i < 3; ++i)
-    {
         _sum[i] += r.GetSum(i);
-    }
+    
+    return n;
 }
 
 cv::Vec3b Region::CalcAvg()
 {
-    double size = _pixels.size();
     for (unsigned int i = 0; i < 3; ++i)
     {
-        _avg.val[i] = _sum[i] / size;
+
+        _avg.val[i] = _sum[i] / _count;
     }
     return _avg;
 }
@@ -65,4 +67,25 @@ std::deque<cv::Point2i> &Region::GetBorderPixels()
 bool Region::MarkedPixelEmpty()
 {
     return _marked_pixels.empty();
+}
+
+void Region::AddNeighbour(unsigned int id)
+{
+    if (id != _id) 
+        _neighbours.insert(id);
+}
+
+void Region::ChangeNeighbour(unsigned int old_id, unsigned int new_id)
+{
+    _neighbours.erase(old_id);
+    _neighbours.insert(new_id);
+}
+std::set<unsigned int> &Region::GetNeighbours()
+{
+    return _neighbours;
+}
+
+cv::Vec3b Region::GetColor()
+{
+    return _avg;
 }
