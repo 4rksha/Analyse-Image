@@ -19,9 +19,6 @@ int Region::GetCount()
 std::set<unsigned int> Region::AbsorbRegion(Region &r)
 {
     std::set<unsigned int> n = r.GetNeighbours();
-    _neighbours.erase(r._id);
-    _old_neighbours.insert(r._id);
-    _old_neighbours.insert(0);
     for (auto pixel : r.GetPixels())
         _pixels.push_back(pixel);
     for (unsigned int i = 0; i < 3; ++i)
@@ -31,7 +28,7 @@ std::set<unsigned int> Region::AbsorbRegion(Region &r)
     _count += r.GetCount();
     for(auto i=n.begin();i != n.end();i++)
     {
-        if(_old_neighbours.count(*i)==0)
+        if(*i !=_id)
         {
             _neighbours.insert(*i);
         }

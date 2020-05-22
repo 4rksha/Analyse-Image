@@ -61,7 +61,7 @@ void seed_placing(cv::Mat &image, std::vector<Region> &regions)
 //         }
 //     }
 // }
-void set_image_color(cv::Mat &image, std::vector<Region> &regions)
+void set_image_avg_color(cv::Mat &image, std::vector<Region> &regions)
 {
     for (auto &region : regions)
     {
@@ -70,6 +70,23 @@ void set_image_color(cv::Mat &image, std::vector<Region> &regions)
             image.at<cv::Vec3b>(p) = color;
         for (auto p : region.GetBorderPixels())
             image.at<cv::Vec3b>(p) = cv::Vec3b();
+    }
+}
+
+void set_image_color(cv::Mat &image, std::vector<Region> &regions,bool * ControleBool)
+{
+    for (auto &region : regions)
+    {
+        if(!ControleBool[region._id])
+        {
+            RNG rng;
+            int r = rng.uniform(0, 256);
+            int g = rng.uniform(0, 256);
+            int b = rng.uniform(0, 256);
+            cv::Vec3b color = cv::Vec3b(b,g,r);
+            for (auto p : region.GetPixels())
+                image.at<cv::Vec3b>(p) = color;
+        }
     }
 }
 
@@ -160,7 +177,7 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
             {
                 Region neighbour = regions.at(*n);
                 distance = cv::norm(region.CalcAvg(), neighbour.CalcAvg());
-                if (distance < CRITERIA_1)
+                if (distance < CRITERIA_1 && !ControleBool[neighbour._id])
                 {
                     change = true;
                     ControleBool[*n] = 1;
@@ -176,15 +193,9 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
                 }
             }
         }
+    } 
     }
-    for(int i=0;i<regions.size();i++)
-    {
-        if(ControleBool[i])
-        {
-            regions.erase(regions.begin()+i);
-        }
-    }
-    set_image_color(testimg, regions);
+    set_image_color(testimg, regions,controleBool);
     cv::resize(testimg, testimg, cv::Size(), 2, 2, 0);
 
     cv::imshow("image", testimg);
