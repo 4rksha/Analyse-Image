@@ -20,6 +20,7 @@ public:
     void ChangeNeighbour(unsigned int old_id, unsigned int new_id);
     std::set<unsigned int> &GetNeighbours();
     cv::Vec3b GetColor();
+    int GetCount();
 
     unsigned int _id;
 
@@ -31,6 +32,7 @@ private:
     std::deque<cv::Point2i> _border_pixels;
     std::vector<cv::Point2i> _pixels;
     std::set<unsigned int> _neighbours;
+    std::set<unsigned int> _old_neighbours;
     int _sum[3] = {0};
     cv::Vec3b _avg;
     int _count = 0;
