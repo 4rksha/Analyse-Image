@@ -28,6 +28,7 @@ std::set<unsigned int> Region::AbsorbRegion(Region &r)
         _sum[i] += r.GetSum(i);
     }
     _count += r.GetCount();
+
     return n;
 }
 

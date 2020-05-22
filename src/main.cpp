@@ -61,7 +61,7 @@ void seed_placing(cv::Mat &image, std::vector<Region> &regions)
 //         }
 //     }
 // }
-void set_image_color(cv::Mat &image, std::vector<Region> &regions)
+void set_image_avg_color(cv::Mat &image, std::vector<Region> &regions)
 {
     for (auto &region : regions)
     {
@@ -75,9 +75,25 @@ void set_image_color(cv::Mat &image, std::vector<Region> &regions)
     }
 }
 
+void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *ControleBool)
+{
+    for (auto &region : regions)
+    {
+        if (!ControleBool[region._id])
+        {
+            int r = 70 + rand() % 185;
+            int g = 70 + rand() % 185;
+            int b = 70 + rand() % 185;
+            cv::Vec3b color = cv::Vec3b(b, g, r);
+            for (auto p : region.GetPixels())
+                image.at<cv::Vec3b>(p) = color;
+        }
+    }
+}
+
 void region_growing(cv::Mat &image, std::vector<Region> &regions)
 {
-    
+
     unsigned int regions_nb = regions.size();
     unsigned int width = image.size().width;
     unsigned int height = image.size().height;
@@ -162,11 +178,11 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
             {
                 for (auto nu : region.GetNeighbours())
                     std::cout << nu << " ";
-                    std::cout << std::endl;
+                std::cout << std::endl;
                 Region neighbour = regions.at(*n);
 
                 distance = cv::norm(region.GetColor(), neighbour.GetColor());
-                if (distance < CRITERIA_1)
+                if (distance < CRITERIA_1 && !ControleBool[neighbour._id])
                 {
                     change = true;
                     ControleBool[*n] = 1;
@@ -183,14 +199,8 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
             }
         }
     }
-    for(int i=0;i<regions.size();i++)
-    {
-        if(ControleBool[i])
-        {
-            regions.erase(regions.begin()+i);
-        }
-    }
-    set_image_color(testimg, regions);
+
+    set_image_color(testimg, regions, ControleBool);
     cv::resize(testimg, testimg, cv::Size(), 2, 2, 0);
 
     cv::imshow("image", testimg);
