@@ -6,10 +6,9 @@
 class Region
 {
 public:
-    Region(unsigned int id) : _marked_pixels(), _border_pixels(), _pixels(), _neighbours(), _id(id) {}
+    Region(unsigned int id) : _marked_pixels(), _border_pixels(), _pixels(), _neighbours(), _id(id), _avg() {}
     void AddPixel(cv::Point2i pixel_pos, cv::Vec3b pixel_color);
     std::set<unsigned int> AbsorbRegion(Region &r);
-    cv::Vec3b CalcAvg();
     std::vector<cv::Point2i> GetPixels();
     cv::Point2i GetMarkedPixel();
     bool MarkedPixelEmpty();
@@ -19,8 +18,9 @@ public:
     void AddNeighbour(unsigned int id);
     void ChangeNeighbour(unsigned int old_id, unsigned int new_id);
     std::set<unsigned int> &GetNeighbours();
+    void CalcAvg();
     cv::Vec3b GetColor();
-
+    int GetCount();
     unsigned int _id;
 
 protected:

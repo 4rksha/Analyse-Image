@@ -10,8 +10,8 @@
 #include "segmentation.hpp"
 #include <cmath>
 
-#define SPLITS 20
-#define CRITERIA_1 8
+#define SPLITS 5
+#define CRITERIA_1 5
 void preprocessing(const cv::Mat &input_image, cv::Mat &image)
 {
     //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
@@ -30,7 +30,7 @@ void seed_placing(cv::Mat &image, std::vector<Region> &regions)
     unsigned int cell_height = image.size().height / SPLITS;
     int
         srand(time(NULL));
-    unsigned int id = 1;
+    unsigned int id = 0;
     for (unsigned int i = 0; i < SPLITS; ++i)
     {
         for (unsigned int j = 0; j < SPLITS; ++j)
@@ -63,13 +63,15 @@ void seed_placing(cv::Mat &image, std::vector<Region> &regions)
 // }
 void set_image_color(cv::Mat &image, std::vector<Region> &regions)
 {
-    for (auto region : regions)
+    for (auto &region : regions)
     {
-        cv::Vec3b color = region.CalcAvg();
+        region.CalcAvg();
+        cv::Vec3b color = region.GetColor();
+        // std::cout << color << std::endl;
         for (auto p : region.GetPixels())
             image.at<cv::Vec3b>(p) = color;
         for (auto p : region.GetBorderPixels())
-           image.at<cv::Vec3b>(p) = cv::Vec3b();
+            image.at<cv::Vec3b>(p) = cv::Vec3b();
     }
 }
 
@@ -80,7 +82,12 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
     unsigned int width = image.size().width;
     unsigned int height = image.size().height;
 
-    unsigned int pixels[image.size().width][image.size().height] = {0};
+    int pixels[image.size().width][image.size().height];
+    for (int i = 0; i < image.size().width; ++i)
+    {
+        for (int j = 0; j < image.size().height; ++j)
+            pixels[i][j] = -1;
+    }
     int marked_count = 0;
     for (auto &region : regions)
     {
@@ -106,7 +113,7 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
                     cv::Point2i pp(p.x + ii, p.y + jj);
                     if (!(pp.x < 0 || pp.x >= width || pp.y < 0 || pp.y >= height))
                     {
-                        if (pixels[pp.x][pp.y] == 0)
+                        if (pixels[pp.x][pp.y] == -1)
                         {
                             cv::Vec3b pp_color = image.at<cv::Vec3b>(pp);
                             float distance = cv::norm((cv::Vec3i)pp_color, (cv::Vec3i)p_color);
@@ -125,6 +132,8 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
                         }
                         else
                         {
+                            if (pixels[pp.x][pp.y] != region._id)
+                                region.AddBorderPixel(pp);
                             region.AddNeighbour(pixels[pp.x][pp.y]);
                         }
                     }
@@ -132,7 +141,6 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
             }
         }
     }
-
     set_image_color(testimg, regions);
     cv::resize(testimg, testimg, cv::Size(), 2, 2, 0);
 
@@ -141,6 +149,9 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
 
 void region_merging(cv::Mat &image, std::vector<Region> &regions)
 {
+    set_image_color(image, regions);
+    cv::resize(image, image, cv::Size(), 2, 2, 0);
+    cv::imshow("image", image);
     float distance;
     bool change = true;
     std::set<unsigned int> neighbours_of_absorbed;
@@ -149,19 +160,27 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
     {
         while (change)
         {
-            std::cout << count++ << std::endl;
             change = false;
             std::set<unsigned int> neighbours = region.GetNeighbours();
             for (auto n = neighbours.begin(); n != neighbours.end(); n++)
             {
+                for (auto nu : region.GetNeighbours())
+                    std::cout << nu << " ";
+                    std::cout << std::endl;
                 Region neighbour = regions.at(*n);
+
                 distance = cv::norm(region.GetColor(), neighbour.GetColor());
                 if (distance < CRITERIA_1)
                 {
                     change = true;
                     neighbours_of_absorbed = region.AbsorbRegion(neighbour);
                     for (auto id : neighbours_of_absorbed)
-                        region.ChangeNeighbour(*n, region._id);
+                    {
+                        if (id != region._id) {
+                            Region nu = regions.at(id);
+                            nu.ChangeNeighbour(*n, region._id);
+                        }
+                    }
                 }
             }
         }

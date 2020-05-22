@@ -16,20 +16,26 @@ std::set<unsigned int> Region::AbsorbRegion(Region &r)
     std::set<unsigned int> n = r.GetNeighbours();
     for (auto pixel : r.GetPixels())
         _pixels.push_back(pixel);
+
+    for (auto neigh : r.GetNeighbours())
+    {
+        if (neigh != _id)
+            _neighbours.insert(neigh);
+    }
     for (unsigned int i = 0; i < 3; ++i)
+    {
         _sum[i] += r.GetSum(i);
-    
+    }
+    _count += r.GetCount();
     return n;
 }
 
-cv::Vec3b Region::CalcAvg()
+void Region::CalcAvg()
 {
     for (unsigned int i = 0; i < 3; ++i)
     {
-
         _avg.val[i] = _sum[i] / _count;
     }
-    return _avg;
 }
 
 std::vector<cv::Point2i> Region::GetPixels()
@@ -71,14 +77,17 @@ bool Region::MarkedPixelEmpty()
 
 void Region::AddNeighbour(unsigned int id)
 {
-    if (id != _id) 
+    if (id != _id)
         _neighbours.insert(id);
 }
 
 void Region::ChangeNeighbour(unsigned int old_id, unsigned int new_id)
 {
-    _neighbours.erase(old_id);
-    _neighbours.insert(new_id);
+    if (new_id != _id)
+    {
+        _neighbours.erase(old_id);
+        _neighbours.insert(new_id);
+    }
 }
 std::set<unsigned int> &Region::GetNeighbours()
 {
@@ -88,4 +97,9 @@ std::set<unsigned int> &Region::GetNeighbours()
 cv::Vec3b Region::GetColor()
 {
     return _avg;
+}
+
+int Region::GetCount()
+{
+    return _count;
 }
