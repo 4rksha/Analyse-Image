@@ -77,7 +77,7 @@ void set_image_color(cv::Mat &image, std::vector<Region> &regions)
 
 void region_growing(cv::Mat &image, std::vector<Region> &regions)
 {
-    cv::Mat testimg(image.size(), image.type(), cv::Scalar(0, 0, 0));
+    
     unsigned int regions_nb = regions.size();
     unsigned int width = image.size().width;
     unsigned int height = image.size().height;
@@ -133,32 +133,28 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
                         else
                         {
                             if (pixels[pp.x][pp.y] != region._id)
+                            {
                                 region.AddBorderPixel(pp);
-                            region.AddNeighbour(pixels[pp.x][pp.y]);
+                                region.AddNeighbour(pixels[pp.x][pp.y]);
+                            }
                         }
                     }
                 }
             }
         }
     }
-    set_image_color(testimg, regions);
-    cv::resize(testimg, testimg, cv::Size(), 2, 2, 0);
-
-    cv::imshow("image", testimg);
 }
 
 void region_merging(cv::Mat &image, std::vector<Region> &regions)
 {
-    set_image_color(image, regions);
-    cv::resize(image, image, cv::Size(), 2, 2, 0);
-    cv::imshow("image", image);
+    cv::Mat testimg(image.size(), image.type(), cv::Scalar(0, 0, 0));
     float distance;
-    bool change = true;
-    std::set<unsigned int> neighbours_of_absorbed;
+    bool ControleBool[regions.size()] = {0};
     unsigned int count = 0;
     for (auto &region : regions)
     {
-        while (change)
+        bool change = true;
+        while (change && !ControleBool[region._id])
         {
             change = false;
             std::set<unsigned int> neighbours = region.GetNeighbours();
@@ -173,10 +169,12 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
                 if (distance < CRITERIA_1)
                 {
                     change = true;
-                    neighbours_of_absorbed = region.AbsorbRegion(neighbour);
+                    ControleBool[*n] = 1;
+                    std::set<unsigned int> neighbours_of_absorbed = region.AbsorbRegion(neighbour);
                     for (auto id : neighbours_of_absorbed)
                     {
-                        if (id != region._id) {
+                        if (id != region._id)
+                        {
                             Region nu = regions.at(id);
                             nu.ChangeNeighbour(*n, region._id);
                         }
@@ -185,6 +183,17 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
             }
         }
     }
+    for(int i=0;i<regions.size();i++)
+    {
+        if(ControleBool[i])
+        {
+            regions.erase(regions.begin()+i);
+        }
+    }
+    set_image_color(testimg, regions);
+    cv::resize(testimg, testimg, cv::Size(), 2, 2, 0);
+
+    cv::imshow("image", testimg);
 }
 
 void segmentation(const cv::Mat &input_image, cv::Mat &output_image)

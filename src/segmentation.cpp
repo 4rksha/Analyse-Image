@@ -14,6 +14,7 @@ void Region::AddPixel(cv::Point2i pixel_pos, cv::Vec3b pixel_color)
 std::set<unsigned int> Region::AbsorbRegion(Region &r)
 {
     std::set<unsigned int> n = r.GetNeighbours();
+    _neighbours.erase(r._id);
     for (auto pixel : r.GetPixels())
         _pixels.push_back(pixel);
 

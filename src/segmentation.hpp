@@ -31,6 +31,7 @@ private:
     std::deque<cv::Point2i> _border_pixels;
     std::vector<cv::Point2i> _pixels;
     std::set<unsigned int> _neighbours;
+    std::set<unsigned int> _old_neighbours;
     int _sum[3] = {0};
     cv::Vec3b _avg;
     int _count = 0;
