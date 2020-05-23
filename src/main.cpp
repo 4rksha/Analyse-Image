@@ -9,34 +9,35 @@
 #include <queue>
 #include "segmentation.hpp"
 #include <cmath>
+#include <ctime>
+#include <string>
 
-#define SPLITS 5
-#define CRITERIA_1 5
-void preprocessing(const cv::Mat &input_image, cv::Mat &image)
+#define GRID_SIZE 4
+#define CRITERIA_1 15
+#define CRITERIA_2 80
+#define TEST 1
+void preprocessing(const cv::Mat &input_image, cv::Mat &image, float min_area)
 {
     //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
     cv::bilateralFilter(input_image, image, 8, 50, 30);
-    if (image.size().height > 1000 || image.size().width > 1000)
-        cv::resize(image, image, cv::Size(), .5, .5);
+    float resize_factor = min_area / image.size().area();
+    if (resize_factor < 1)
+        cv::resize(image, image, cv::Size(), resize_factor, resize_factor);
 
     //cv::fastNlMeansDenoisingColored(image, image);
     //cv::addWeighted(input_image, 0.5, image, 0.2, 0, image);
-    //image = input_image.clone();
+    // image = input_image.clone();
 }
 
-void seed_placing(cv::Mat &image, std::vector<Region> &regions)
+void seed_placing(cv::Mat &image, std::vector<Region> &regions, int grid_size)
 {
-    unsigned int cell_width = image.size().width / SPLITS;
-    unsigned int cell_height = image.size().height / SPLITS;
-    int
-        srand(time(NULL));
     unsigned int id = 0;
-    for (unsigned int i = 0; i < SPLITS; ++i)
+    for (unsigned int i = 0; i < image.size().width - grid_size; i += grid_size)
     {
-        for (unsigned int j = 0; j < SPLITS; ++j)
+        for (unsigned int j = 0; j < image.size().height - grid_size; j += grid_size)
         {
-            cv::Point2i seed(i * cell_width + rand() % cell_width,
-                             j * cell_height + rand() % cell_height);
+            cv::Point2i seed(i + rand() % grid_size,
+                             j + rand() % grid_size);
             Region r(id++);
             r.AddPixel(seed, image.at<cv::Vec3b>(seed));
             regions.push_back(r);
@@ -44,54 +45,45 @@ void seed_placing(cv::Mat &image, std::vector<Region> &regions)
     }
 }
 
-// void seed_placing(cv::Mat &image, std::vector<Region> &regions)
-// {
-//     unsigned int cell_size = SPLITS;
-
-//     srand(time(NULL));
-//     for (unsigned int i = 0; i * cell_size < image.size().width + cell_size; ++i)
-//     {
-//         for (unsigned int j = 0; j * cell_size < image.size().height + cell_size; ++j)
-//         {
-//             cv::Point2i seed(i * cell_size + rand() % cell_size,
-//                              j * cell_size + rand() % cell_size);
-//             Region r;
-//             r.AddPixel(seed, image.at<cv::Vec3b>(seed));
-//             regions.push_back(r);
-//         }
-//     }
-// }
-void set_image_avg_color(cv::Mat &image, std::vector<Region> &regions)
+void set_image_avg_color(cv::Mat &image, std::vector<Region> &regions, bool show_borders)
 {
     for (auto &region : regions)
     {
         region.CalcAvg();
         cv::Vec3b color = region.GetColor();
-        // std::cout << color << std::endl;
         for (auto p : region.GetPixels())
             image.at<cv::Vec3b>(p) = color;
-        for (auto p : region.GetBorderPixels())
-            image.at<cv::Vec3b>(p) = cv::Vec3b();
-    }
-}
-
-void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *ControleBool)
-{
-    for (auto &region : regions)
-    {
-        if (!ControleBool[region._id])
+        if (show_borders)
         {
-            int r = 70 + rand() % 185;
-            int g = 70 + rand() % 185;
-            int b = 70 + rand() % 185;
-            cv::Vec3b color = cv::Vec3b(b, g, r);
-            for (auto p : region.GetPixels())
-                image.at<cv::Vec3b>(p) = color;
+            for (auto p : region.GetBorderPixels())
+                image.at<cv::Vec3b>(p) = cv::Vec3b();
         }
     }
 }
 
-void region_growing(cv::Mat &image, std::vector<Region> &regions)
+void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *ControleBool, bool show_borders)
+{
+    int count = 0;
+    for (auto &region : regions)
+    {
+        if (!ControleBool[region._id])
+        {
+            int r = 30 + rand() % 205;
+            int g = 30 + rand() % 205;
+            int b = 30 + rand() % 205;
+            cv::Vec3b color = cv::Vec3b(b, g, r);
+            for (auto p : region.GetPixels())
+                image.at<cv::Vec3b>(p) = color;
+        }
+        if (show_borders)
+        {
+            for (auto p : region.GetBorderPixels())
+                image.at<cv::Vec3b>(p) = cv::Vec3b();
+        }
+    }
+}
+
+void region_growing(cv::Mat &image, std::vector<Region> &regions, int criteria1)
 {
 
     unsigned int regions_nb = regions.size();
@@ -112,7 +104,7 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
         region.AddMarkedPixel(p);
         marked_count++;
     }
-    int count = image.size().area();
+    int count = marked_count;
     while (marked_count != 0)
     {
         for (auto &region : regions)
@@ -129,16 +121,16 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
                     cv::Point2i pp(p.x + ii, p.y + jj);
                     if (!(pp.x < 0 || pp.x >= width || pp.y < 0 || pp.y >= height))
                     {
+                        cv::Vec3b pp_color = image.at<cv::Vec3b>(pp);
+                        float distance = cv::norm((cv::Vec3i)pp_color, (cv::Vec3i)p_color);
                         if (pixels[pp.x][pp.y] == -1)
                         {
-                            cv::Vec3b pp_color = image.at<cv::Vec3b>(pp);
-                            float distance = cv::norm((cv::Vec3i)pp_color, (cv::Vec3i)p_color);
-
-                            if (distance < CRITERIA_1)
+                            if (distance < criteria1)
                             {
                                 region.AddPixel(pp, pp_color);
                                 region.AddMarkedPixel(pp);
                                 marked_count++;
+                                count++;
                                 pixels[pp.x][pp.y] = region._id;
                             }
                             else
@@ -150,8 +142,10 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
                         {
                             if (pixels[pp.x][pp.y] != region._id)
                             {
-                                region.AddBorderPixel(pp);
-                                region.AddNeighbour(pixels[pp.x][pp.y]);
+                                if (distance < criteria1)
+                                    region.AddNeighbour(pixels[pp.x][pp.y]);
+                                else
+                                    region.AddBorderPixel(pp);
                             }
                         }
                     }
@@ -159,9 +153,17 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions)
             }
         }
     }
+    for (auto &region : regions)
+    {
+        region.CalcAvg();
+    }
+    std::cout << "Nombre de pixels traités  : " << count << std::endl;
+    std::cout << "Nombre total de pixels    : " << image.size().area() << std::endl;
+    std::cout << "Completion                : " << (float)count / image.size().area() * 100 << "%" << std::endl;
+    std::cout << "Nombre de region avant fusion : " << regions.size() << std::endl;
 }
 
-void region_merging(cv::Mat &image, std::vector<Region> &regions)
+void region_merging(cv::Mat &image, std::vector<Region> &regions, int criteria2, bool show_borders)
 {
     cv::Mat testimg(image.size(), image.type(), cv::Scalar(0, 0, 0));
     float distance;
@@ -176,73 +178,100 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions)
             std::set<unsigned int> neighbours = region.GetNeighbours();
             for (auto n = neighbours.begin(); n != neighbours.end(); n++)
             {
-                for (auto nu : region.GetNeighbours())
-                    std::cout << nu << " ";
-                std::cout << std::endl;
                 Region neighbour = regions.at(*n);
-
                 distance = cv::norm(region.GetColor(), neighbour.GetColor());
-                if (distance < CRITERIA_1 && !ControleBool[neighbour._id])
+                if ((distance < criteria2 || neighbour.GetPixels().size() < 20) && !ControleBool[neighbour._id])
                 {
                     change = true;
+                    count++;
                     ControleBool[*n] = 1;
+
                     std::set<unsigned int> neighbours_of_absorbed = region.AbsorbRegion(neighbour);
                     for (auto id : neighbours_of_absorbed)
                     {
                         if (id != region._id)
                         {
-                            Region nu = regions.at(id);
-                            nu.ChangeNeighbour(*n, region._id);
+                            Region noa = regions.at(id);
+                            noa.ChangeNeighbour(*n, region._id);
                         }
                     }
                 }
             }
         }
     }
+    std::cout << "Nombre de region après fusion : " << regions.size() - count << std::endl;
 
-    set_image_color(testimg, regions, ControleBool);
-    cv::resize(testimg, testimg, cv::Size(), 2, 2, 0);
-
-    cv::imshow("image", testimg);
+    set_image_color(image, regions, ControleBool, show_borders);
 }
 
-void segmentation(const cv::Mat &input_image, cv::Mat &output_image)
+void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_borders, int grid_size,
+                  int criteria1, int criteria2, float min_area)
 {
     std::vector<Region> regions;
-    preprocessing(input_image, output_image);
-    seed_placing(output_image, regions);
-    region_growing(output_image, regions);
-    region_merging(output_image, regions);
-    //cv::resize(output_image, output_image, cv::Size(), 3, 3);
-    //cv::imshow("image", output_image);
+    preprocessing(input_image, output_image, min_area);
+    seed_placing(output_image, regions, grid_size);
+    region_growing(output_image, regions, criteria1);
+    cv::Mat output2_image = output_image.clone();
+    region_merging(output_image, regions, criteria2, show_borders);
+    set_image_avg_color(output2_image, regions, show_borders);
+
+    if (output_image.size().area() < min_area)
+    {
+        cv::resize(output_image, output_image, cv::Size(), 3, 3, cv::InterpolationFlags::INTER_NEAREST);
+        cv::resize(output2_image, output2_image, cv::Size(), 3, 3, cv::InterpolationFlags::INTER_NEAREST);
+    }
+
+    cv::imwrite("./output/output.jpg", output_image);
+    cv::imwrite("./output/output2.jpg", output2_image);
 }
 
 int main(int argc, char **argv)
 {
-    if (argc != 2)
+    srand(time(NULL));
+    float min_area = 250000;
+    int criteria2 = 50;
+    int criteria1 = 12;
+    int grid_size = 10;
+    std::string filename;
+    cv::Mat input_image;
+    bool show_borders = false;
+    switch (argc)
     {
-        std::cout << " Usage: main FileToLoadAndDisplay" << std::endl;
-        return -1;
-    }
-    std::string filename = argv[1];
-    if (filename.find(".jpg") != std::string::npos || filename.find(".png") != std::string::npos)
-    {
-        cv::Mat input_image;
-        input_image = cv::imread(argv[1], cv::IMREAD_COLOR);
-
-        if (!input_image.data)
+    case 7:
+        min_area = std::stof(argv[6]);
+    case 6:
+        criteria2 = std::stoi(argv[5]);
+    case 5:
+        criteria1 = std::stoi(argv[4]);
+    case 4:
+        grid_size = std::stoi(argv[3]);
+    case 3:
+        show_borders = strcmp(argv[2], "-s") == 0;
+    case 2:
+        filename = argv[1];
+        if (filename.find(".jpg") != std::string::npos || filename.find(".png") != std::string::npos)
         {
-            std::cout << "Could not open or find the image" << std::endl;
+            input_image = cv::imread(argv[1], cv::IMREAD_COLOR);
+
+            if (!input_image.data)
+            {
+                std::cout << "Could not open or find the image" << std::endl;
+                return -1;
+            }
+        }
+        else
+        {
+            std::cout << " Incorrect file format. \n Accepted format : \n- Image: .png, .jpg\n- Video: .mp4, .avi \n Exiting." << std::endl;
             return -1;
         }
+        break;
+    default:
+        std::cout << " Usage: main FileToLoadAndDisplay [show_borders] [grid_size] [criteria1] [criteria2] [min_area]" << std::endl;
+        return -1;
+    }
+    cv::Mat segmented_image;
+    segmentation(input_image, segmented_image, show_borders, grid_size, criteria1, criteria2, min_area);
+    cv::waitKey(0);
 
-        cv::Mat segmented_image;
-        segmentation(input_image, segmented_image);
-        cv::waitKey(0);
-    }
-    else
-    {
-        std::cout << " Incorrect file format. \n Accepted format : \n- Image: .png, .jpg\n- Video: .mp4, .avi \n Exiting." << std::endl;
-    }
     return 0;
 }
