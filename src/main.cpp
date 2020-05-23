@@ -180,7 +180,7 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions, int criteria2,
             {
                 Region neighbour = regions.at(*n);
                 distance = cv::norm(region.GetColor(), neighbour.GetColor());
-                if ((distance < criteria2 || neighbour.GetPixels().size() < 20) && !ControleBool[neighbour._id])
+                if ((distance < criteria2 || neighbour.GetPixels().size() < 1) && !ControleBool[neighbour._id])
                 {
                     change = true;
                     count++;
@@ -205,7 +205,7 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions, int criteria2,
 }
 
 void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_borders, int grid_size,
-                  int criteria1, int criteria2, float min_area)
+                  int criteria1, int criteria2, float min_area, bool save)
 {
     std::vector<Region> regions;
     preprocessing(input_image, output_image, min_area);
@@ -217,12 +217,19 @@ void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_b
 
     if (output_image.size().area() < min_area)
     {
-        cv::resize(output_image, output_image, cv::Size(), 3, 3, cv::InterpolationFlags::INTER_NEAREST);
-        cv::resize(output2_image, output2_image, cv::Size(), 3, 3, cv::InterpolationFlags::INTER_NEAREST);
+        cv::resize(output_image, output_image, cv::Size(), 2, 2, cv::InterpolationFlags::INTER_NEAREST);
+        cv::resize(output2_image, output2_image, cv::Size(), 2, 2, cv::InterpolationFlags::INTER_NEAREST);
     }
 
+    if (save) {
     cv::imwrite("./output/output.jpg", output_image);
     cv::imwrite("./output/output2.jpg", output2_image);
+    } else
+    {
+        cv::imshow("frame1", output_image);
+        cv::imshow("frame2", output2_image);
+    }
+    
 }
 
 int main(int argc, char **argv)
@@ -235,8 +242,11 @@ int main(int argc, char **argv)
     std::string filename;
     cv::Mat input_image;
     bool show_borders = false;
+    bool save = false;
     switch (argc)
     {
+    case 8: 
+        save = std::stoi(argv[7]) != 0;
     case 7:
         min_area = std::stof(argv[6]);
     case 6:
@@ -246,7 +256,7 @@ int main(int argc, char **argv)
     case 4:
         grid_size = std::stoi(argv[3]);
     case 3:
-        show_borders = strcmp(argv[2], "-s") == 0;
+        show_borders = std::stoi(argv[2]) != 0;
     case 2:
         filename = argv[1];
         if (filename.find(".jpg") != std::string::npos || filename.find(".png") != std::string::npos)
@@ -270,7 +280,7 @@ int main(int argc, char **argv)
         return -1;
     }
     cv::Mat segmented_image;
-    segmentation(input_image, segmented_image, show_borders, grid_size, criteria1, criteria2, min_area);
+    segmentation(input_image, segmented_image, show_borders, grid_size, criteria1, criteria2, min_area, save);
     cv::waitKey(0);
 
     return 0;
