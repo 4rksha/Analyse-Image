@@ -246,7 +246,7 @@ int main(int argc, char **argv)
     switch (argc)
     {
     case 8: 
-        save = std::stoi(argv[7]) != 0;
+        save = true;
     case 7:
         min_area = std::stof(argv[6]);
     case 6:
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
         }
         break;
     default:
-        std::cout << " Usage: main FileToLoadAndDisplay [show_borders] [grid_size] [criteria1] [criteria2] [min_area]" << std::endl;
+        std::cout << " Usage: main FileToLoadAndDisplay [show_borders] [grid_size] [criteria1] [criteria2] [min_area] [save]" << std::endl;
         return -1;
     }
     cv::Mat segmented_image;
