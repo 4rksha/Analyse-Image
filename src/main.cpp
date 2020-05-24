@@ -3,7 +3,12 @@
 #include <opencv2/core/types.hpp>
 #include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/objdetect.hpp>
 #include <opencv2/photo.hpp>
+#include <omp.h>
+
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -16,6 +21,12 @@
 #define CRITERIA_1 15
 #define CRITERIA_2 80
 #define TEST 1
+
+
+std::vector<cv::Vec3b> colors;
+
+//Segmentation
+
 void preprocessing(const cv::Mat &input_image, cv::Mat &image, float min_area)
 {
     //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
@@ -72,6 +83,7 @@ void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *Control
             int g = 30 + rand() % 205;
             int b = 30 + rand() % 205;
             cv::Vec3b color = cv::Vec3b(b, g, r);
+            colors.push_back(color);
             for (auto p : region.GetPixels())
                 image.at<cv::Vec3b>(p) = color;
         }
@@ -232,6 +244,130 @@ void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_b
     
 }
 
+cv::Mat farnerback(cv::Mat & gray1, cv::Mat & grayValue)
+{
+    cv::Mat flow(gray1.size(), CV_32FC2);
+    cv::blur(gray1,gray1,cv::Size(10,10));
+    cv::blur(grayValue,grayValue,cv::Size(10,10));
+    cv::calcOpticalFlowFarneback(gray1, grayValue, flow, 0.5, 3, 50, 3, 5, 1.2, 0);
+    // visualization
+    cv::Mat flow_parts[2];
+    cv::split(flow, flow_parts);
+    cv::Mat magnitude, angle, magn_norm;
+    cv::cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
+    cv::normalize(magnitude, magn_norm, 0.0f, 5.0f, cv::NORM_MINMAX);
+    angle *= ((1.f / 360.f) * (180.f / 255.f));
+    //build hsv image
+    cv::Mat _hsv[3], hsv, hsv8, bgr;
+    _hsv[0] = angle;
+    _hsv[1] = cv::Mat::ones(angle.size(), CV_32F);
+    _hsv[2] = magn_norm;
+    cv::merge(_hsv, 3, hsv);
+    hsv.convertTo(hsv8, CV_8U, 255.0);
+    cv::cvtColor(hsv8, bgr, cv::COLOR_BGR2GRAY);
+    cv::Mat bwimg;
+    cv::threshold(bgr,bwimg, 175, 255, cv::THRESH_BINARY);
+    gray1=grayValue.clone();
+    return bwimg;
+}
+
+
+
+int capture(std::string access_file,unsigned int nbFrame)
+{
+    cv::VideoCapture capture(access_file);
+    cv::Mat frameValue,frame1;
+    cv::Mat grayValue,gray1;
+    cv::Mat detected_edges;
+
+    if(!capture.isOpened())
+    {
+        std::cout << "Could not open reference ";
+        std::cout << access_file.data();
+        std::cout << std::endl;
+        return -1;
+    }
+    capture.read(frame1);
+    unsigned int i=0;
+    while(i < 60 + nbFrame){
+        capture.read(frame1);
+        i++;
+    }
+    cv::cvtColor(frame1, gray1, cv::COLOR_BGR2GRAY);
+    i=0;
+    int ws=0;
+    while ( capture.read(frameValue) && i < 1000)
+    {
+        colors.resize(0);
+        if( frameValue.empty() )
+        {
+            std::cout << "--(!) No captured frameValue -- Break!\n";
+            break;
+        }
+        cv::Mat segmented_image;
+        cv::Mat segmented_image_RT;
+        cv::Mat m;
+        cv::Mat save=frameValue.clone();
+        cv::cvtColor(frameValue,grayValue,cv::COLOR_BGR2GRAY);
+        #pragma omp parallel
+        {
+            #pragma omp single
+	        {
+                segmentation(frameValue, segmented_image, false, 2, 15, 24,250000, false);
+                cv::resize(segmented_image, segmented_image_RT, frameValue.size(), 0, 0, cv::INTER_CUBIC);
+            }
+            #pragma omp single
+	        {
+                cv::fastNlMeansDenoisingColored(frameValue,frameValue,21,21, 21, 21);
+                m = farnerback(gray1,grayValue);
+            }
+            #pragma omp barrier
+        }
+        cv::Mat binary;
+        cv::Mat bin;
+        cv::Vec3b p2;
+        binary.create(gray1.size(),gray1.type());
+        bin.create(gray1.size(),gray1.type());
+        cv::Mat finalForeground;
+        finalForeground.create(gray1.size(),gray1.type());
+        finalForeground=cv::Scalar::all(0);
+        for(int k=0;k<=colors.size();k++)
+        {
+            binary = cv::Scalar::all(0);
+            float whitePixels=0;
+            float whitePixels2=0;
+            p2 = colors[k];
+            cv::inRange(segmented_image_RT, p2, p2, binary);
+            whitePixels = cv::countNonZero(binary);
+            bin=binary & m;
+            whitePixels2 = cv::countNonZero(bin);
+            if( whitePixels>0 && whitePixels2/whitePixels>=0.5)
+            {
+                finalForeground = finalForeground+binary;
+            }
+
+
+        }
+        cv::Mat finalResult;
+        segmented_image_RT.copyTo(finalResult,finalForeground);
+        cv::imshow("mask",finalForeground);
+        cv::imshow("baseImage",save);
+        cv::imshow("result",finalResult);
+        if( cv::waitKey(10) == 27 )
+        {
+            break; // escape
+        }
+        i++;
+    }
+    capture.release();
+    return 0;
+}
+
+int video_Mode(std::string s)
+{
+    capture(s,200);
+}
+
 int main(int argc, char **argv)
 {
     srand(time(NULL));
@@ -243,6 +379,7 @@ int main(int argc, char **argv)
     cv::Mat input_image;
     bool show_borders = false;
     bool save = false;
+    bool video = false;
     switch (argc)
     {
     case 8: 
@@ -269,6 +406,10 @@ int main(int argc, char **argv)
                 return -1;
             }
         }
+        else if( filename.find(".mp4") != std::string::npos)
+        {
+            video=true;
+        }
         else
         {
             std::cout << " Incorrect file format. \n Accepted format : \n- Image: .png, .jpg\n- Video: .mp4, .avi \n Exiting." << std::endl;
@@ -279,9 +420,17 @@ int main(int argc, char **argv)
         std::cout << " Usage: main FileToLoadAndDisplay [show_borders] [grid_size] [criteria1] [criteria2] [min_area] [save]" << std::endl;
         return -1;
     }
-    cv::Mat segmented_image;
-    segmentation(input_image, segmented_image, show_borders, grid_size, criteria1, criteria2, min_area, save);
-    cv::waitKey(0);
+    if(!video)
+    {
+        cv::Mat segmented_image;
+        segmentation(input_image, segmented_image, show_borders, grid_size, criteria1, criteria2, min_area, save);
+        cv::waitKey(0);
+    }
+    else
+    {
+        video_Mode(filename);
+    }
+    
 
     return 0;
 }
