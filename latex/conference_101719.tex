@@ -81,7 +81,7 @@ This type of algorithm is usually applied to a grayscale image.
 
 \subsection{Basic principle}
 
-As I told you above, our algorithm is based on the principle of a single seeded region growing. As defined above, we will therefore randomly place points on an image, these points will serve as bases for the rest of the algorithm. The main difference between our algorithm and a classic algorithm is that our algorithm is applied to a color image.
+As I told you above, our algorithm is based on the principle of a single seeded region growing. As defined above, we will therefore randomly place points on an image, these points will serve as bases for the rest of the algorithm. The main difference between our algorithm and a classic algorithm is that our algorithm is applied to a color image. 
 
 \subsection{Data structure}
 
@@ -113,7 +113,7 @@ When all the regions have been processed then we quit the execution and we can d
 \subsection{Comparative result}
 
 As explained above, we compare the results obtained by our algorithm to the result of a k-means algorithm and to those of a watershed algorithm. First, we can see that the different zones are fairly well recognized by our algorithm (b) and the k-means algorithm (c). We can also notice that the watershed  (d) does not seem to adapt to the analysis of an image of this type. We will therefore exclude this algorithm for the following steps.
-Now looking at the last two algorithms, we can notice that the kmeans to less clean and less smooth regions algorithm than our algorithm. And that, despite the fact that the kmeans algorithm makes it possible to segment the image in more detail, our algorithm makes it possible to identify the general shapes of objects with more precision, which is more suitable for detecting human bodies in the basic image (a).
+Now looking at the last two algorithms, we can notice that the kmeans to less clean and less smooth regions algorithm than our algorithm. And that, despite the fact that the kmeans algorithm makes it possible to segment the image in more detail, our algorithm makes it possible to identify the general shapes of objects with more precision, which is more suitable for detecting human bodies in the basic image (a). 
 
 \begin{figure}[h!]
   \centering
@@ -141,9 +141,39 @@ Now looking at the last two algorithms, we can notice that the kmeans to less cl
   
 \end{figure}
 
-\section{Background Detection}
+\subsection{Limit of our algorithm}
 
-In order to allow background detection on videos, OpenCV provides two tools, the first being the backgroundDetector class and the second being the motion detection classes. After different tests it seemed to us that the results returned by the two classes were very similar and as the movement detection was faster at execution we decided to use this class.
+Our algorithm poses two major easily identifiable problems:
+
+Firstly, if two different elements have a similar color they will be considered identical when they should not.
+Secondly, our algorithm is highly dependent on the parameters passed by the user. Indeed, whether it is the number of seeds to be placed or the value of the thresholds, everything must be defined by the user. And depending on the choices made by the latter, the results obtained can be very different (fig 2).
+
+\begin{figure}[h!]
+  \centering
+  \begin{tabular}{@{}c@{}}
+    \includegraphics[width=0.4\linewidth]{fig7.jpg} \\[\abovecaptionskip]
+    \small (a) Result with hight threshold
+  \end{tabular}
+  \begin{tabular}{@{}c@{}}
+    \includegraphics[width=0.4\linewidth]{fig8.jpg} \\[\abovecaptionskip]
+    \small (b) Result with medium  threshold
+  \end{tabular}
+
+  \vspace{\floatsep}
+
+  \begin{tabular}{@{}c@{}}
+    \includegraphics[width=0.7\linewidth]{fig9.jpg} \\[\abovecaptionskip]
+    \small (c) Result with low threshold
+  \end{tabular}
+  \caption{result of our algorithm with different settings}
+  \label{fig 2}
+  
+\end{figure}
+
+
+\section{Foreground Detection}
+
+In order to allow Foreground detection on videos, OpenCV provides two tools, the first being the backgroundDetector class and the second being the motion detection classes. After different tests it seemed to us that the results returned by the two classes were very similar and as the movement detection was faster at execution we decided to use this class.
 
 \subsection{Movement detection}
  
@@ -162,10 +192,33 @@ After this movement detection, we obtain a result (b)  with the body cuted from 
     \small (b) movement detection result
   \end{tabular}
   \caption{Movement detection}
-  \label{fig 2}
+  \label{fig 3}
 \end{figure}
 
 \subsection{Segmentation and body detection}
+
+Once we have been able to detect the movements on our image we must now look into a more precise analysis of the elements. Indeed, as you can see, part of the background is cut with the people we want to detect. And this is where our segmentation becomes useful. We will use the defined zones to determine which ones are really moving and which are not. For this, we compare for each area the number of pixels in the area and the number of moving pixels in the area. If more than 50 percent of the pixels in the area are in motion, we consider that it is then an element actually in motion and we cut it out. Otherwise we consider it to be background and we don't get it. 
+
+This method, gives us pretty good results (fig 4).
+
+\begin{figure}[h!]
+  \centering
+  \begin{tabular}{@{}c@{}}
+    \includegraphics[width=0.4\linewidth]{fig5.png} \\[\abovecaptionskip]
+    \small (a) basic image
+  \end{tabular}
+  \begin{tabular}{@{}c@{}}
+    \includegraphics[width=0.4\linewidth]{fig10.png} \\[\abovecaptionskip]
+    \small (b) foreground segmentation result
+  \end{tabular}
+  \caption{Movement detection}
+  \label{fig 3}
+\end{figure}
+
+\section{Conclusion}
+
+To conclude, this project allowed us to enter the field of image analysis and to discover the importance of segmentation within numerous analysis methods. Moreover, this allowed us to develop our own method of segmentation and to apply it in a specific area, the analysis of the human body. The method put in place returns rather conclusive results allowing us to imagine a place for our segmentation algorithm in the detection of human body on a video.
+
 
 \section*{Acknowledgment}
 
