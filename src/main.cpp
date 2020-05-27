@@ -95,7 +95,7 @@ void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *Control
     }
 }
 
-void region_growing(cv::Mat &image, std::vector<Region> &regions, int criteria1)
+void region_growing(cv::Mat &image, std::vector<Region> &regions, int criteria1, int criteria2)
 {
 
     unsigned int regions_nb = regions.size();
@@ -154,7 +154,7 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions, int criteria1)
                         {
                             if (pixels[pp.x][pp.y] != region._id)
                             {
-                                if (distance < criteria1)
+                                if (distance < criteria2)
                                     region.AddNeighbour(pixels[pp.x][pp.y]);
                                 else
                                     region.AddBorderPixel(pp);
@@ -222,7 +222,7 @@ void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_b
     std::vector<Region> regions;
     preprocessing(input_image, output_image, min_area);
     seed_placing(output_image, regions, grid_size);
-    region_growing(output_image, regions, criteria1);
+    region_growing(output_image, regions, criteria1, criteria2);
     cv::Mat output2_image = output_image.clone();
     region_merging(output_image, regions, criteria2, show_borders);
     set_image_avg_color(output2_image, regions, show_borders);
@@ -363,9 +363,10 @@ int capture(std::string access_file,unsigned int nbFrame)
     return 0;
 }
 
-int video_Mode(std::string s)
+void video_Mode(std::string s)
 {
     capture(s,200);
+
 }
 
 int main(int argc, char **argv)
