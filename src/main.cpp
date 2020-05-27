@@ -22,11 +22,12 @@
 #define CRITERIA_2 80
 #define TEST 1
 
-
+// définie la couleur de la segmentation
 std::vector<cv::Vec3b> colors;
 
 //Segmentation
 
+// affecte toutes les transformations de bases à l'image en vue de son traitement
 void preprocessing(const cv::Mat &input_image, cv::Mat &image, float min_area)
 {
     //cv::cvtColor(input_image, image, cv::COLOR_BGR2GRAY);
@@ -40,6 +41,8 @@ void preprocessing(const cv::Mat &input_image, cv::Mat &image, float min_area)
     // image = input_image.clone();
 }
 
+
+// place des points d'intérets aléatoirement sur l'image
 void seed_placing(cv::Mat &image, std::vector<Region> &regions, int grid_size)
 {
     unsigned int id = 0;
@@ -56,6 +59,7 @@ void seed_placing(cv::Mat &image, std::vector<Region> &regions, int grid_size)
     }
 }
 
+//crée l'image ou chaque région est dessinée avec la moyenne des couleur de chacun de ses pixels
 void set_image_avg_color(cv::Mat &image, std::vector<Region> &regions, bool show_borders)
 {
     for (auto &region : regions)
@@ -72,6 +76,7 @@ void set_image_avg_color(cv::Mat &image, std::vector<Region> &regions, bool show
     }
 }
 
+//crée l'image ou chaque région est dessinée avec des couleurs aléatoires
 void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *ControleBool, bool show_borders)
 {
     int count = 0;
@@ -95,6 +100,8 @@ void set_image_color(cv::Mat &image, std::vector<Region> &regions, bool *Control
     }
 }
 
+// crée nos régions avec les points d'intérets marqués et les fais grossir
+// s'arrête quand les régions ne grossissent plus
 void region_growing(cv::Mat &image, std::vector<Region> &regions, int criteria1, int criteria2)
 {
 
@@ -175,6 +182,7 @@ void region_growing(cv::Mat &image, std::vector<Region> &regions, int criteria1,
     std::cout << "Nombre de region avant fusion : " << regions.size() << std::endl;
 }
 
+//fusionne les régions entre elle quand elles sont de couleurs prochent
 void region_merging(cv::Mat &image, std::vector<Region> &regions, int criteria2, bool show_borders)
 {
     cv::Mat testimg(image.size(), image.type(), cv::Scalar(0, 0, 0));
@@ -216,6 +224,7 @@ void region_merging(cv::Mat &image, std::vector<Region> &regions, int criteria2,
     set_image_color(image, regions, ControleBool, show_borders);
 }
 
+// lance la boucle principale de segmentation et affiches les résultats
 void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_borders, int grid_size,
                   int criteria1, int criteria2, float min_area, bool save)
 {
@@ -244,6 +253,7 @@ void segmentation(const cv::Mat &input_image, cv::Mat &output_image, bool show_b
     
 }
 
+//calcule un mask des zones en mouvement
 cv::Mat farnerback(cv::Mat & gray1, cv::Mat & grayValue)
 {
     cv::Mat flow(gray1.size(), CV_32FC2);
@@ -272,7 +282,7 @@ cv::Mat farnerback(cv::Mat & gray1, cv::Mat & grayValue)
 }
 
 
-
+//lis la vidéo et exécute les diffférents traitements dessus
 int capture(std::string access_file,unsigned int nbFrame)
 {
     cv::VideoCapture capture(access_file);
@@ -363,12 +373,14 @@ int capture(std::string access_file,unsigned int nbFrame)
     return 0;
 }
 
+//lance le mode vidéo
 void video_Mode(std::string s)
 {
     capture(s,200);
 
 }
 
+//fonction principale, lance la fonction de segmentation en fonction des paramètres et du type d'objet passé en argument
 int main(int argc, char **argv)
 {
     srand(time(NULL));
