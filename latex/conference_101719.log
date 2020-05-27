@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.5.22)  24 MAY 2020 15:58
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.5.22)  27 MAY 2020 07:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -324,11 +324,7 @@ Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1369.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1370.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1371.
 )
-(./conference_101719.aux
-
-LaTeX Warning: Label `fig 3' multiply defined.
-
-)
+(./conference_101719.aux)
 \openout1 = `conference_101719.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 12.
@@ -345,7 +341,8 @@ LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 12.
 LaTeX Font Info:    ... okay on input line 12.
 LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 12.
 LaTeX Font Info:    Try loading font information for TS1+cmr on input line 12.
- (/usr/share/texlive/texmf-dist/tex/latex/base/ts1cmr.fd
+
+(/usr/share/texlive/texmf-dist/tex/latex/base/ts1cmr.fd
 File: ts1cmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    ... okay on input line 12.
@@ -437,69 +434,70 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 <fig0.jpg, id=11, 451.6875pt x 281.05pt>
 File: fig0.jpg Graphic file (type jpg)
 <use fig0.jpg>
-Package pdftex.def Info: fig0.jpg  used on input line 121.
+Package pdftex.def Info: fig0.jpg  used on input line 127.
 (pdftex.def)             Requested size: 100.79846pt x 62.7189pt.
-<fig1.jpg, id=12, 1006.76125pt x 626.34pt>
-File: fig1.jpg Graphic file (type jpg)
-<use fig1.jpg>
-Package pdftex.def Info: fig1.jpg  used on input line 125.
-(pdftex.def)             Requested size: 100.79846pt x 62.70456pt.
-<fig2.png, id=13, 457.71pt x 288.07625pt>
+<fig1.png, id=12, 904.37875pt x 566.115pt>
+File: fig1.png Graphic file (type png)
+<use fig1.png>
+Package pdftex.def Info: fig1.png  used on input line 131.
+(pdftex.def)             Requested size: 100.79846pt x 63.09346pt.
+<fig2.png, id=14, 457.71pt x 288.07625pt>
 File: fig2.png Graphic file (type png)
 <use fig2.png>
-Package pdftex.def Info: fig2.png  used on input line 132.
+Package pdftex.def Info: fig2.png  used on input line 138.
 (pdftex.def)             Requested size: 100.79846pt x 63.4385pt.
 <fig3.png, id=15, 456.70625pt x 281.05pt>
 File: fig3.png Graphic file (type png)
 <use fig3.png>
-Package pdftex.def Info: fig3.png  used on input line 136.
+Package pdftex.def Info: fig3.png  used on input line 142.
 (pdftex.def)             Requested size: 100.79846pt x 62.02846pt.
-<fig7.jpg, id=16, 903.375pt x 562.1pt>
-File: fig7.jpg Graphic file (type jpg)
-<use fig7.jpg>
-Package pdftex.def Info: fig7.jpg  used on input line 154.
-(pdftex.def)             Requested size: 100.79846pt x 62.71461pt.
-<fig8.jpg, id=17, 903.375pt x 562.1pt>
-File: fig8.jpg Graphic file (type jpg)
-<use fig8.jpg>
-Package pdftex.def Info: fig8.jpg  used on input line 158.
-(pdftex.def)             Requested size: 100.79846pt x 62.71461pt.
-<fig9.jpg, id=18, 903.375pt x 562.1pt>
-File: fig9.jpg Graphic file (type jpg)
-<use fig9.jpg>
-Package pdftex.def Info: fig9.jpg  used on input line 165.
-(pdftex.def)             Requested size: 176.39923pt x 109.75916pt.
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[2 <./fig0.jpg> <./fig1.jpg> <./fig2.png> <./fig3.png>]
+[2]
+<fig7.png, id=19, 904.37875pt x 562.1pt>
+File: fig7.png Graphic file (type png)
+<use fig7.png>
+Package pdftex.def Info: fig7.png  used on input line 161.
+(pdftex.def)             Requested size: 100.79846pt x 62.646pt.
+<fig8.png, id=20, 905.3825pt x 562.1pt>
+File: fig8.png Graphic file (type png)
+<use fig8.png>
+Package pdftex.def Info: fig8.png  used on input line 165.
+(pdftex.def)             Requested size: 100.79846pt x 62.57738pt.
+<fig9.png, id=21, 911.405pt x 568.1225pt>
+File: fig9.png Graphic file (type png)
+<use fig9.png>
+Package pdftex.def Info: fig9.png  used on input line 172.
+(pdftex.def)             Requested size: 176.39923pt x 109.95555pt.
 Missing character: There is no â in font ptmr7t!
 Missing character: There is no € in font ptmr7t!
 Missing character: There is no ™ in font ptmr7t!
 Missing character: There is no â in font ptmr7t!
 Missing character: There is no € in font ptmr7t!
 Missing character: There is no ™ in font ptmr7t!
-<fig5.png, id=24, 1292.83pt x 727.71875pt>
+<fig5.png, id=22, 1292.83pt x 727.71875pt>
 File: fig5.png Graphic file (type png)
 <use fig5.png>
-Package pdftex.def Info: fig5.png  used on input line 187.
+Package pdftex.def Info: fig5.png  used on input line 194.
 (pdftex.def)             Requested size: 100.79846pt x 56.73073pt.
-<fig6.png, id=25, 1299.85625pt x 725.71124pt>
+<fig6.png, id=23, 1299.85625pt x 725.71124pt>
 File: fig6.png Graphic file (type png)
 <use fig6.png>
-Package pdftex.def Info: fig6.png  used on input line 191.
+Package pdftex.def Info: fig6.png  used on input line 198.
 (pdftex.def)             Requested size: 100.79846pt x 56.27525pt.
 File: fig5.png Graphic file (type png)
 <use fig5.png>
-Package pdftex.def Info: fig5.png  used on input line 207.
+Package pdftex.def Info: fig5.png  used on input line 214.
 (pdftex.def)             Requested size: 100.79846pt x 56.73073pt.
-<fig10.png, id=26, 1076.02pt x 626.34pt>
+<fig10.png, id=24, 1280.785pt x 718.685pt>
 File: fig10.png Graphic file (type png)
 <use fig10.png>
-Package pdftex.def Info: fig10.png  used on input line 211.
-(pdftex.def)             Requested size: 100.79846pt x 58.67143pt.
-
+Package pdftex.def Info: fig10.png  used on input line 218.
+(pdftex.def)             Requested size: 100.79846pt x 56.55287pt.
+ [3 <./fig0.jpg> <./fig1.png> <./fig2.png> <./fig3.png> <./fig7.png> <./fig8.pn
+g> <./fig9.png> <./fig5.png> <./fig6.png> <./fig10.png>]
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -511,29 +509,30 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[3 <./fig7.jpg> <./fig8.jpg> <./fig9.jpg> <./fig5.png> <./fig6.png> <./fig10.pn
-g>] (./conference_101719.aux)
+[4
 
-LaTeX Warning: There were multiply-defined labels.
+] (./conference_101719.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
  4397 strings out of 492982
  63684 string characters out of 6134896
- 130885 words of memory out of 5000000
+ 131822 words of memory out of 5000000
  7892 multiletter control sequences out of 15000+600000
  41116 words of font info for 88 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 41i,12n,35p,696b,307s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 41i,12n,35p,698b,307s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
 e/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf
 -dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/typ
 e1/urw/times/utmbi8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/u
 tmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on conference_101719.pdf (3 pages, 1133439 bytes).
+Output written on conference_101719.pdf (4 pages, 685065 bytes).
 PDF statistics:
- 51 PDF objects out of 1000 (max. 8388607)
- 25 compressed objects within 1 object stream
+ 58 PDF objects out of 1000 (max. 8388607)
+ 27 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  51 words of extra memory for PDF output out of 10000 (max. 10000000)
 
